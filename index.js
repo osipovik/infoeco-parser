@@ -5,7 +5,7 @@ var tress = require("tress");
 //Создаем очередь с задержкой выполнения 1 секунда
 var queue = tress(function(pointId, callback) {
 	console.log('id = ' + pointId);
-	getMapPointInfo(pointId);
+	parseMapPointInfo(pointId);
 }, -100);
 
 queue.drain = function(){
@@ -28,42 +28,45 @@ request("http://ecomobile.infoeco.ru/grafik-stoyanok.html", function(error, resp
 		var $ = cheerio.load(body);
 
 		$("table.table tr:not(:first-child)").each(function() {
-			var tdString = "";
-			var mapPointId = 0;
-			var point = {};
-
-			// $(this).find("td:not(:last-child)").each(function(index) {
-			// 	tdString += $(this).text() + " | ";
-			// });
-
-			var tdList = $(this).find("td");
-			tdString += tdList.eq(0).text() + " | ";
-			tdString += tdList.eq(1).text() + " | ";
-			tdString += tdList.eq(2).text() + " | ";
-			tdString += tdList.eq(3).text() + " | ";
-
-			var link = $(this).find("td:last-child a").attr("href");
-
-			if (link) {
-				var arLinkPart = link.split("=");
-				mapPointId = arLinkPart[1];
-				tdString += mapPointId;
-				//TODO реализовать очередь, с паузой при выполнении
-				// setTimeout(getMapPointInfo(mapPointId), 1000);
-			}
-
-			console.log(tdString);
-
-			// return false;
+			parseMainPointInfo($(this));
 		});
-
-		// console.log(queue.waiting);
 	}
 });
 
-function getMapPointInfo(mapPointId) {
+function parseMainPointInfo(pointInfoLine) {
+	var mapPointId = 0;
+	var point = {};
+
+	var tdList = pointInfoLine.find("td");
+
+	point.district = tdList.eq(0).text();
+	point.address = tdList.eq(1).text();
+	point.date = tdList.eq(2).text();
+
+	var timeStartEnd = tdList.eq(3).text().split("-");
+
+	if (timeStartEnd.length == 2) {
+		point.time_start = timeStartEnd[0];
+		point.time_end = timeStartEnd[1];
+	}
+
+	var link = pointInfoLine.find("td:last-child a").attr("href");
+
+	if (link) {
+		var arLinkPart = link.split("=");
+		mapPointId = arLinkPart[1];
+		// point.coord = mapPointId;
+		//TODO реализовать очередь, с паузой при выполнении
+		parseMapPointInfo(mapPointId, point);
+	}
+
+	return false;
+}
+
+function parseMapPointInfo(mapPointId, point) {
 	var url = "http://ecomobile.infoeco.ru/34.html&datePointId=" + mapPointId;
 	var coord = [];
+	var info = point;
 
 	request(url, function(error, response, body) {
 		if (error) {
@@ -77,11 +80,11 @@ function getMapPointInfo(mapPointId) {
 			var result = script.match(pattern);
 
 			if (result) {
-				coord = result[1].split(",");
-				console.info(mapPointId + " - " + result[1]);
-				console.info(coord);
+				info.coord = result[1].split(",");
+				// console.info(mapPointId + " - " + result[1]);
+				// console.info(coord);
 			} else {
-				console.info(mapPointId);
+				// console.info(mapPointId);
 			}
 
 			//Ищем фотограцию места, если она есть в парметре balloonContent
@@ -89,8 +92,15 @@ function getMapPointInfo(mapPointId) {
 			result = script.match(pattern);
 
 			if (result) {
-				console.info(result[1]);
+				info.photo = "http://ecomobile.infoeco.ru/" + result[1];
+				// console.info(result[1]);
 			}
 		}
+
+		putPointToMongo(info);
 	});
+}
+
+function putPointToMongo(pointInfo) {
+	console.info(pointInfo);
 }
