@@ -1,36 +1,63 @@
 var request = require("request");
-var jsdom = require("jsdom");
 var cheerio = require("cheerio");
-var mapPageSource = "";
+var tress = require("tress");
 
-//TODO перевести на использование request+cheerio
-jsdom.env({
-	url: "http://ecomobile.infoeco.ru/grafik-stoyanok.html",
-	scripts: ["http://code.jquery.com/jquery.js"],
-	done: function(err, window) {
-		var $ = window.$;
+//Создаем очередь с задержкой выполнения 1 секунда
+var queue = tress(function(pointId, callback) {
+	console.log('id = ' + pointId);
+	getMapPointInfo(pointId);
+}, -100);
+
+queue.drain = function(){
+    console.log('Finished');
+};
+
+queue.error = function(err) {
+    console.log('Job ' + this + ' failed with error ' + err);
+};
+
+queue.success = function(data) {
+    console.log('Job ' + this + ' successfully finished. Result is ' + data);
+}
+
+//Получаем страницу с табличеым представлением графика стоянок
+request("http://ecomobile.infoeco.ru/grafik-stoyanok.html", function(error, response, body) {
+	if (error) {
+		console.log("error: " + error);
+	} else {
+		var $ = cheerio.load(body);
 
 		$("table.table tr:not(:first-child)").each(function() {
 			var tdString = "";
 			var mapPointId = 0;
-			var exit = false;
+			var point = {};
 
-			$(this).find("td:not(:last-child)").each(function() {
-				tdString += $(this).text() + " | ";
-			});
+			// $(this).find("td:not(:last-child)").each(function(index) {
+			// 	tdString += $(this).text() + " | ";
+			// });
+
+			var tdList = $(this).find("td");
+			tdString += tdList.eq(0).text() + " | ";
+			tdString += tdList.eq(1).text() + " | ";
+			tdString += tdList.eq(2).text() + " | ";
+			tdString += tdList.eq(3).text() + " | ";
 
 			var link = $(this).find("td:last-child a").attr("href");
 
 			if (link) {
 				var arLinkPart = link.split("=");
 				mapPointId = arLinkPart[1];
-				// console.log(tdString + mapPointId);
+				tdString += mapPointId;
 				//TODO реализовать очередь, с паузой при выполнении
-				setTimeout(getMapPointInfo(mapPointId), 1000);
+				// setTimeout(getMapPointInfo(mapPointId), 1000);
 			}
 
-			return false;
+			console.log(tdString);
+
+			// return false;
 		});
+
+		// console.log(queue.waiting);
 	}
 });
 
@@ -46,7 +73,6 @@ function getMapPointInfo(mapPointId) {
 
 			var script = $("script").text();
 			//Ищем координнаты точки на карте
-			// var pattern =  new RegExp("marks\\['month'\\]\\[" + mapPointId + "\\]\\s=\\snew\\symaps\\.Placemark\\(\\[(.*)\\]");
 			var pattern =  /accentMark=\snew\symaps\.Placemark\(\[([0-9\.]*,[0-9\.]*)\],/;
 			var result = script.match(pattern);
 
@@ -64,7 +90,6 @@ function getMapPointInfo(mapPointId) {
 
 			if (result) {
 				console.info(result[1]);
-				return true;
 			}
 		}
 	});
