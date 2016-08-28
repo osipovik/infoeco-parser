@@ -1,15 +1,17 @@
 var request = require("request");
 var cheerio = require("cheerio");
 var tress = require("tress");
+var fs = require('fs');
 
-//Создаем очередь с задержкой выполнения 1 секунда
-var queue = tress(function(pointId, callback) {
-	console.log('id = ' + pointId);
-	parseMapPointInfo(pointId);
-}, -100);
+// //Создаем очередь с задержкой выполнения 1 секунда
+var queue = tress(function(job, done) {
+	parseMainPointInfo(job);
+	// Функция callback
+	done();
+}, -1000);
 
-queue.drain = function(){
-    console.log('Finished');
+queue.drain = function() {
+	console.log("Finished!");
 };
 
 queue.error = function(err) {
@@ -17,7 +19,7 @@ queue.error = function(err) {
 };
 
 queue.success = function(data) {
-    console.log('Job ' + this + ' successfully finished. Result is ' + data);
+    // console.log('Job ' + this + ' successfully finished. Result is ' + data);
 }
 
 //Получаем страницу с табличеым представлением графика стоянок
@@ -28,7 +30,7 @@ request("http://ecomobile.infoeco.ru/grafik-stoyanok.html", function(error, resp
 		var $ = cheerio.load(body);
 
 		$("table.table tr:not(:first-child)").each(function() {
-			parseMainPointInfo($(this));
+			queue.push($(this));
 		});
 	}
 });
@@ -55,12 +57,10 @@ function parseMainPointInfo(pointInfoLine) {
 	if (link) {
 		var arLinkPart = link.split("=");
 		mapPointId = arLinkPart[1];
-		// point.coord = mapPointId;
-		//TODO реализовать очередь, с паузой при выполнении
 		parseMapPointInfo(mapPointId, point);
+	} else {
+		putPointToMongo(point);
 	}
-
-	return false;
 }
 
 function parseMapPointInfo(mapPointId, point) {
@@ -81,10 +81,8 @@ function parseMapPointInfo(mapPointId, point) {
 
 			if (result) {
 				info.coord = result[1].split(",");
-				// console.info(mapPointId + " - " + result[1]);
-				// console.info(coord);
 			} else {
-				// console.info(mapPointId);
+				
 			}
 
 			//Ищем фотограцию места, если она есть в парметре balloonContent
@@ -93,7 +91,6 @@ function parseMapPointInfo(mapPointId, point) {
 
 			if (result) {
 				info.photo = "http://ecomobile.infoeco.ru/" + result[1];
-				// console.info(result[1]);
 			}
 		}
 

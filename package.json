@@ -18,7 +18,7 @@
   "homepage": "https://github.com/osipovik/infoeco-parser#readme",
   "dependencies": {
     "cheerio": "^0.22.0",
-    "mongodb": "^2.2.8",
-    "request": "^2.74.0"
+    "request": "^2.74.0",
+    "tress": "^1.0.3"
   }
 }
