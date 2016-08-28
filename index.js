@@ -1,7 +1,7 @@
 var request = require("request");
 var cheerio = require("cheerio");
 var tress = require("tress");
-var fs = require('fs');
+var scorocode = require("scorocode");
 
 // //Создаем очередь с задержкой выполнения 1 секунда
 var queue = tress(function(job, done) {
@@ -27,10 +27,13 @@ request("http://ecomobile.infoeco.ru/grafik-stoyanok.html", function(error, resp
 	if (error) {
 		console.log("error: " + error);
 	} else {
-		var $ = cheerio.load(body);
+		// Чистим старые данные
+		removeOldData();
 
+		var $ = cheerio.load(body);
 		$("table.table tr:not(:first-child)").each(function() {
 			queue.push($(this));
+			// return false;
 		});
 	}
 });
@@ -59,7 +62,7 @@ function parseMainPointInfo(pointInfoLine) {
 		mapPointId = arLinkPart[1];
 		parseMapPointInfo(mapPointId, point);
 	} else {
-		putPointToMongo(point);
+		prepareDataForDB(point);
 	}
 }
 
@@ -94,10 +97,92 @@ function parseMapPointInfo(mapPointId, point) {
 			}
 		}
 
-		putPointToMongo(info);
+		prepareDataForDB(info);
 	});
 }
 
-function putPointToMongo(pointInfo) {
-	console.info(pointInfo);
+function prepareDataForDB(pointInfo) {
+	var arDate = pointInfo.date.split(".");
+	pointInfo.date = new Date(arDate[2], arDate[1]-1, arDate[0]);
+	// console.info(date);
+
+	var arTimeStart = pointInfo.time_start.split(".");
+	pointInfo.time_start = new Date(arDate[2], arDate[1]-1, arDate[0], arTimeStart[0], arTimeStart[1]);
+	// console.info(timeStart);
+
+	var arTimeEnd = pointInfo.time_end.split(".");
+	pointInfo.time_end = new Date(arDate[2], arDate[1]-1, arDate[0], arTimeEnd[0], arTimeEnd[1]);
+	// console.info(timeEnd);
+
+	var queryItem = new scorocode.Query("points");
+
+	// console.info(pointInfo);
+
+	queryItem
+		.equalTo("address", pointInfo.address)
+		.equalTo("time_start", pointInfo.time_start)
+		.equalTo("time_end", pointInfo.time_end)
+		.find().then((result) => {
+			if (!result.result || result.result.length == 0) {
+				addNewPointToDB(pointInfo);
+			}
+		}).catch((error) => {
+	    	console.log("Что-то пошло не так: \n", error)
+		});
+
+	// console.info(pointInfo);
+}
+
+function removeOldData() {
+	scorocode.Init({
+		ApplicationID: "88e98d83c5f4edc68589184843ad6904",
+    	JavaScriptKey: "2213dc3c13272159af8345764cfd55d2",
+    	MasterKey: "91d8cf4388e9c32390b49b07aed16e74"
+	});
+
+	var queryItems = new scorocode.Query("points");
+	var now = new Date();
+
+	queryItems.lessThan("time_end", now)
+		.find()
+		.then((finded) => {
+			// console.info(finded);
+			queryItems.remove(finded)
+				.then((removed) => {
+					console.info(removed);
+				})
+				.catch((error) => {
+					console.info("Что-то пошло не так: \n", error);
+				});
+		})
+		.catch((error) => {
+            console.log("Что-то пошло не так: \n", error)
+        });
+}
+
+function addNewPointToDB(pointInfo) {
+	// Создадим новый экземпляр объекта коллекции points.
+	var pointItem = new scorocode.Object("points");
+	// Используем метод set() для передачи объекту данных в поля.
+	pointItem
+		.set("district", pointInfo.district)
+		.set("address", pointInfo.address)
+		.set("date", pointInfo.date)
+		.set("time_start", pointInfo.time_start)
+		.set("time_end", pointInfo.time_end);
+	// Если есть координаты, передаем их
+	if (pointInfo.coord) {
+		pointItem.set("location", pointInfo.coord);
+	}
+	// Если есть изображение, сохраняем ссылку на него
+	if (pointInfo.photo) {
+		pointItem.set("photo", pointInfo.photo);
+	}
+	// Сохраняем объект
+	pointItem.save()
+		.then((saved) => {
+			console.info("successfully saved");
+		}).catch((error) => {
+			console.info("facking fail: \n", error);
+		});
 }

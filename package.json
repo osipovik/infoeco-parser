@@ -19,6 +19,7 @@
   "dependencies": {
     "cheerio": "^0.22.0",
     "request": "^2.74.0",
+    "scorocode": "^0.2.8",
     "tress": "^1.0.3"
   }
 }
