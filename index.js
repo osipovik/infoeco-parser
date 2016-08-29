@@ -23,17 +23,50 @@ queue.success = function(data) {
 }
 
 //Получаем страницу с табличеым представлением графика стоянок
-request("http://ecomobile.infoeco.ru/grafik-stoyanok.html", function(error, response, body) {
+// request("http://ecomobile.infoeco.ru/grafik-stoyanok.html", function(error, response, body) {
+// 	if (error) {
+// 		console.log("error: " + error);
+// 	} else {
+// 		// Чистим старые данные
+// 		removeOldData();
+
+// 		var $ = cheerio.load(body);
+// 		$("table.table tr:not(:first-child)").each(function() {
+// 			queue.push($(this));
+// 			// return false;
+// 		});
+// 	}
+// });
+
+//Получаем страницу с табличеым представлением графика стоянок
+request("http://ecomobile.infoeco.ru/staczionarnyie-punktyi.html", function(error, response, body) {
 	if (error) {
 		console.log("error: " + error);
 	} else {
-		// Чистим старые данные
-		removeOldData();
-
 		var $ = cheerio.load(body);
-		$("table.table tr:not(:first-child)").each(function() {
-			queue.push($(this));
-			// return false;
+		$("div#content dl dt").each(function(index) {
+			console.log(index + " - " + $(this).text());
+
+			var statPointInfo = $("div#content dl dd").eq(index).text().split("\r\n");
+
+			statPointInfo.forEach(function(item, i, arr) {
+				statPointInfo[i] = item.replace(/^\s+|\s+$/g,'');
+			});
+
+			var pointInfo = {};
+
+			pointInfo.district = $(this).text().split(" ")[0];
+			pointInfo.address = statPointInfo[1];
+			pointInfo.phone = statPointInfo[2];
+
+			var arTime = statPointInfo[3].match(/([0-9\.]*)\s\S{2}\s([0-9\.]*)/);
+
+			console.log(pointInfo);
+			console.log(arTime);
+			// trim string
+			// string.replace(/^\s+|\s+$/g,''); 
+
+			return false;
 		});
 	}
 });
