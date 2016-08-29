@@ -23,53 +23,55 @@ queue.success = function(data) {
 }
 
 //Получаем страницу с табличеым представлением графика стоянок
-// request("http://ecomobile.infoeco.ru/grafik-stoyanok.html", function(error, response, body) {
-// 	if (error) {
-// 		console.log("error: " + error);
-// 	} else {
-// 		// Чистим старые данные
-// 		removeOldData();
-
-// 		var $ = cheerio.load(body);
-// 		$("table.table tr:not(:first-child)").each(function() {
-// 			queue.push($(this));
-// 			// return false;
-// 		});
-// 	}
-// });
-
-//Получаем страницу с табличеым представлением графика стоянок
-request("http://ecomobile.infoeco.ru/staczionarnyie-punktyi.html", function(error, response, body) {
+request("http://ecomobile.infoeco.ru/grafik-stoyanok.html", function(error, response, body) {
 	if (error) {
 		console.log("error: " + error);
 	} else {
+		// Чистим старые данные
+		removeOldData();
+
 		var $ = cheerio.load(body);
-		$("div#content dl dt").each(function(index) {
-			console.log(index + " - " + $(this).text());
-
-			var statPointInfo = $("div#content dl dd").eq(index).text().split("\r\n");
-
-			statPointInfo.forEach(function(item, i, arr) {
-				statPointInfo[i] = item.replace(/^\s+|\s+$/g,'');
-			});
-
-			var pointInfo = {};
-
-			pointInfo.district = $(this).text().split(" ")[0];
-			pointInfo.address = statPointInfo[1];
-			pointInfo.phone = statPointInfo[2];
-
-			var arTime = statPointInfo[3].match(/([0-9\.]*)\s\S{2}\s([0-9\.]*)/);
-
-			console.log(pointInfo);
-			console.log(arTime);
-			// trim string
-			// string.replace(/^\s+|\s+$/g,''); 
-
-			return false;
+		$("table.table tr:not(:first-child)").each(function() {
+			queue.push($(this));
+			// return false;
 		});
 	}
 });
+
+//Получаем страницу с табличеым представлением графика стоянок
+// request("http://ecomobile.infoeco.ru/staczionarnyie-punktyi.html", function(error, response, body) {
+// 	if (error) {
+// 		console.log("error: " + error);
+// 	} else {
+// 		var $ = cheerio.load(body);
+// 		$("div#content dl dt").each(function(index) {
+// 			console.log(index + " - " + $(this).text());
+
+// 			var statPointInfo = $("div#content dl dd").eq(index).text().split("\r\n");
+
+// 			statPointInfo.forEach(function(item, i, arr) {
+// 				statPointInfo[i] = item.replace(/^\s+|\s+$/g,'');
+// 			});
+
+// 			var pointInfo = {};
+
+// 			pointInfo.district = $(this).text().split(" ")[0];
+// 			pointInfo.address = statPointInfo[1];
+// 			pointInfo.phone = statPointInfo[2];
+
+// 			var arTime = statPointInfo[3].match(/([0-9\.]*)\s\S{2}\s([0-9\.]*)/);
+
+// 			pointInfo.time
+
+// 			console.log(pointInfo);
+// 			console.log(arTime);
+// 			// trim string
+// 			// string.replace(/^\s+|\s+$/g,''); 
+
+// 			return false;
+// 		});
+// 	}
+// });
 
 function parseMainPointInfo(pointInfoLine) {
 	var mapPointId = 0;
@@ -140,16 +142,16 @@ function prepareDataForDB(pointInfo) {
 	// console.info(date);
 
 	var arTimeStart = pointInfo.time_start.split(".");
-	pointInfo.time_start = new Date(arDate[2], arDate[1]-1, arDate[0], arTimeStart[0], arTimeStart[1]);
+	pointInfo.time_start = ((arTimeStart[0] * 60) + arTimeStart[1]) * 60;
 	// console.info(timeStart);
 
 	var arTimeEnd = pointInfo.time_end.split(".");
-	pointInfo.time_end = new Date(arDate[2], arDate[1]-1, arDate[0], arTimeEnd[0], arTimeEnd[1]);
+	pointInfo.time_end = ((arTimeEnd[0] * 60) + arTimeEnd[1]) * 60;
 	// console.info(timeEnd);
 
 	var queryItem = new scorocode.Query("points");
 
-	// console.info(pointInfo);
+	console.info(pointInfo);
 
 	queryItem
 		.equalTo("address", pointInfo.address)
