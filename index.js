@@ -30,22 +30,25 @@ queue.success = function(data) {
     // console.log('Job ' + this + ' successfully finished. Result is ' + data);
 }
 
+scorocodeInit();
+
 // Получаем страницу с табличеым представлением графика стоянок
-// request(PARSE_URL + "/grafik-stoyanok.html", function(error, response, body) {
-// 	if (error) {
-// 		console.log("error: " + error);
-// 	} else {
-// 		// Чистим старые данные
-// 		removeOldData();
+request(PARSE_URL + "/grafik-stoyanok.html", function(error, response, body) {
+	if (error) {
+		console.log("error: " + error);
+	} else {
+		// Чистим старые данные
+		removeOldData();
 
-// 		var $ = cheerio.load(body);
-// 		$("table.table tr:not(:first-child)").each(function() {
-// 			queue.push($(this));
-// 			// return false;
-// 		});
-// 	}
-// });
+		var $ = cheerio.load(body);
+		$("table.table tr:not(:first-child)").each(function() {
+			queue.push($(this));
+			// return false;
+		});
+	}
+});
 
+// Получаем страницу с картой точек стоянок
 request(PARSE_URL + "/34.html", function(error, response, body) {
 	if (error) {
 		console.error("error: " + error);
@@ -56,6 +59,16 @@ request(PARSE_URL + "/34.html", function(error, response, body) {
 	}
 });
 
+// Инициализация подключения к BAAS
+function scorocodeInit() {
+	scorocode.Init({
+		ApplicationID: APP_ID,
+    	JavaScriptKey: JS_KEY,
+    	MasterKey: MASTER_KEY
+	});
+}
+
+// Обрабатывает список стационарных пунктов приема
 function getStatMapPointInfo() {
 	// Получаем страницу с табличеым представлением стационарных пунктов сбора
 	request(PARSE_URL + "/staczionarnyie-punktyi.html", function(error, response, body) {
@@ -102,7 +115,9 @@ function getStatMapPointInfo() {
 				if (result) {
 					pointInfo.photo = PARSE_URL + "/" + result[1];
 				}
-				console.log(pointInfo);
+				// console.log(pointInfo);
+
+				prepareDataForDB(pointInfo);
 
 				// return false;
 			});
@@ -110,6 +125,10 @@ function getStatMapPointInfo() {
 	});
 }
 
+/**
+* Переводит время в секунды от начала суток
+* @param time - время в 24-х часовом формате
+*/
 function timeToSeconds(time) {
 	var arTime = time.split(".");
 	return (((parseInt(arTime[0]) * 60) + parseInt(arTime[1])) * 60);
@@ -178,9 +197,10 @@ function parseMapPointInfo(mapPointId, point) {
 }
 
 function prepareDataForDB(pointInfo) {
-	var arDate = pointInfo.date.split(".");
-	pointInfo.date = new Date(arDate[2], arDate[1]-1, arDate[0], 9);
-	// console.info(arDate);
+	if (pointInfo.date) {
+		var arDate = pointInfo.date.split(".");
+		pointInfo.date = new Date(arDate[2], arDate[1]-1, arDate[0], 9);
+	}
 
 	var queryItem = new scorocode.Query("points");
 
@@ -198,17 +218,9 @@ function prepareDataForDB(pointInfo) {
 		}).catch((error) => {
 	    	console.error("Что-то пошло не так: \n", error)
 		});
-
-	// console.info(pointInfo);
 }
 
 function removeOldData() {
-	scorocode.Init({
-		ApplicationID: APP_ID,
-    	JavaScriptKey: JS_KEY,
-    	MasterKey: MASTER_KEY
-	});
-
 	var queryItems = new scorocode.Query("points");
 	var now = new Date();
 
