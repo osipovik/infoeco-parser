@@ -7,6 +7,7 @@ var scorocode = require("scorocode");
 const APP_ID = "88e98d83c5f4edc68589184843ad6904";
 const JS_KEY = "2213dc3c13272159af8345764cfd55d2";
 const MASTER_KEY = "91d8cf4388e9c32390b49b07aed16e74";
+// константа - адрес сайта. с которого берем информацию
 const PARSE_URL = "http://ecomobile.infoeco.ru";
 
 var mapContent;
@@ -33,20 +34,20 @@ queue.success = function(data) {
 scorocodeInit();
 
 // Получаем страницу с табличеым представлением графика стоянок
-request(PARSE_URL + "/grafik-stoyanok.html", function(error, response, body) {
-	if (error) {
-		console.log("error: " + error);
-	} else {
-		// Чистим старые данные
-		removeOldData();
+// request(PARSE_URL + "/grafik-stoyanok.html", function(error, response, body) {
+// 	if (error) {
+// 		console.log("error: " + error);
+// 	} else {
+// 		// Чистим старые данные
+// 		removeOldData();
 
-		var $ = cheerio.load(body);
-		$("table.table tr:not(:first-child)").each(function() {
-			queue.push($(this));
-			// return false;
-		});
-	}
-});
+// 		var $ = cheerio.load(body);
+// 		$("table.table tr:not(:first-child)").each(function() {
+// 			queue.push($(this));
+// 			// return false;
+// 		});
+// 	}
+// });
 
 // Получаем страницу с картой точек стоянок
 request(PARSE_URL + "/34.html", function(error, response, body) {
@@ -75,6 +76,11 @@ function getStatMapPointInfo() {
 		if (error) {
 			console.error("error: " + error);
 		} else {
+			//TODO вынести функцию очистки контента, иначе возникает 
+			//		состояние гонки добавления и удаления элелментов
+			// Чистим старые данные
+			removeStatData();
+
 			var $ = cheerio.load(body);
 			$("div#content dl dt").each(function(index) { 
 				var ddItem = $("div#content dl dd").eq(index);
@@ -115,7 +121,7 @@ function getStatMapPointInfo() {
 				if (result) {
 					pointInfo.photo = PARSE_URL + "/" + result[1];
 				}
-				// console.log(pointInfo);
+				console.log(pointInfo);
 
 				prepareDataForDB(pointInfo);
 
@@ -208,12 +214,15 @@ function prepareDataForDB(pointInfo) {
 
 	queryItem
 		.equalTo("address", pointInfo.address)
+		.equalTo("location", pointInfo.coord)
 		.equalTo("date", pointInfo.date)
 		.equalTo("time_start", pointInfo.time_start)
 		.equalTo("time_end", pointInfo.time_end)
 		.find().then((result) => {
 			if (!result.result || result.result.length == 0) {
 				addNewPointToDB(pointInfo);
+			} else {
+				console.info('point alredy exists');
 			}
 		}).catch((error) => {
 	    	console.error("Что-то пошло не так: \n", error)
@@ -224,7 +233,30 @@ function removeOldData() {
 	var queryItems = new scorocode.Query("points");
 	var now = new Date();
 
-	queryItems.lessThan("time_end", now)
+	queryItems.lessThan("date", now)
+		.find()
+		.then((finded) => {
+			// console.info(finded);
+			queryItems.remove(finded)
+				.then((removed) => {
+					console.log(removed);
+				})
+				.catch((error) => {
+					console.error("Что-то пошло не так: \n", error);
+				});
+		})
+		.catch((error) => {
+            console.error("Что-то пошло не так: \n", error)
+        });
+}
+
+function removeStatData() {
+	var queryItems = new scorocode.Query("points");
+
+	queryItems
+		.doesNotExist("date")
+		.equalTo("time_start", 36000)
+		.equalTo("time_end", 72000)
 		.find()
 		.then((finded) => {
 			// console.info(finded);
@@ -259,9 +291,14 @@ function addNewPointToDB(pointInfo) {
 	if (pointInfo.photo) {
 		pointItem.set("photo", pointInfo.photo);
 	}
+	// Если есть телефон, сохраняем его
+	if (pointInfo.phone) {
+		pointItem.set("phone", pointInfo.phone);
+	}
 	// Сохраняем объект
 	pointItem.save()
 		.then((saved) => {
+			console.log(pointInfo);
 			console.log("successfully saved");
 		}).catch((error) => {
 			console.error("facking fail: \n", error);
