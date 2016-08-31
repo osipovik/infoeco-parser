@@ -34,20 +34,14 @@ queue.success = function(data) {
 scorocodeInit();
 
 // Получаем страницу с табличеым представлением графика стоянок
-// request(PARSE_URL + "/grafik-stoyanok.html", function(error, response, body) {
-// 	if (error) {
-// 		console.log("error: " + error);
-// 	} else {
-// 		// Чистим старые данные
-// 		removeOldData();
-
-// 		var $ = cheerio.load(body);
-// 		$("table.table tr:not(:first-child)").each(function() {
-// 			queue.push($(this));
-// 			// return false;
-// 		});
-// 	}
-// });
+request(PARSE_URL + "/grafik-stoyanok.html", function(error, response, body) {
+	if (error) {
+		console.log("error: " + error);
+	} else {
+		// Чистим старые данные
+		removeOldData(body);
+	}
+});
 
 // Получаем страницу с картой точек стоянок
 request(PARSE_URL + "/34.html", function(error, response, body) {
@@ -56,7 +50,7 @@ request(PARSE_URL + "/34.html", function(error, response, body) {
 	} else {
 		$ = cheerio.load(body);
 		mapContent = $("script").text();
-		getStatMapPointInfo();
+		removeStatData();
 	}
 });
 
@@ -76,11 +70,6 @@ function getStatMapPointInfo() {
 		if (error) {
 			console.error("error: " + error);
 		} else {
-			//TODO вынести функцию очистки контента, иначе возникает 
-			//		состояние гонки добавления и удаления элелментов
-			// Чистим старые данные
-			removeStatData();
-
 			var $ = cheerio.load(body);
 			$("div#content dl dt").each(function(index) { 
 				var ddItem = $("div#content dl dd").eq(index);
@@ -229,7 +218,16 @@ function prepareDataForDB(pointInfo) {
 		});
 }
 
-function removeOldData() {
+function startParseShedule(body) {
+	var $ = cheerio.load(body);
+	$("table.table tr:not(:first-child)").each(function() {
+		queue.push($(this));
+		// return false;
+	});
+}
+
+// Чистим старые данные в расписании стоянок
+function removeOldData(body) {
 	var queryItems = new scorocode.Query("points");
 	var now = new Date();
 
@@ -240,6 +238,7 @@ function removeOldData() {
 			queryItems.remove(finded)
 				.then((removed) => {
 					console.log(removed);
+					startParseShedule(body);
 				})
 				.catch((error) => {
 					console.error("Что-то пошло не так: \n", error);
@@ -250,6 +249,7 @@ function removeOldData() {
         });
 }
 
+// Чистим старые данные о стационарных пунктах
 function removeStatData() {
 	var queryItems = new scorocode.Query("points");
 
@@ -263,6 +263,7 @@ function removeStatData() {
 			queryItems.remove(finded)
 				.then((removed) => {
 					console.log(removed);
+					getStatMapPointInfo();
 				})
 				.catch((error) => {
 					console.error("Что-то пошло не так: \n", error);
