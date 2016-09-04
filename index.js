@@ -3,6 +3,7 @@ var request = require("request");
 var cheerio = require("cheerio");
 var tress = require("tress");
 var scorocode = require("scorocode");
+
 // костанты с ключами для работы с BAAS Scorocode
 const APP_ID = "88e98d83c5f4edc68589184843ad6904";
 const JS_KEY = "2213dc3c13272159af8345764cfd55d2";
@@ -95,7 +96,8 @@ function getStatMapPointInfo() {
 				var mapPointId = result[1];
 
 
-				var pattern = "marks\\['stat'\\]\\[" + mapPointId + "\\]\\s=\\snew\\symaps\\.Placemark\\(\\[([0-9\\.]*,[0-9\\.]*)\\],";
+				var pattern = "marks\\['stat'\\]\\[" + mapPointId + 
+					"\\]\\s=\\snew\\symaps\\.Placemark\\(\\[([0-9\\.]*,[0-9\\.]*)\\],";
 				var result = mapContent.match(pattern);
 
 				if (result) {
@@ -103,7 +105,8 @@ function getStatMapPointInfo() {
 				}
 
 				// Ищем фотограцию места, если она есть в парметре balloonContent
-				pattern = "marks\\['stat'\\]\\[" + mapPointId + "\\]\\s=\\snew\\symaps\\.Placemark[\\s\\S]*balloonContent:\\s'<p><a\\shref=\"(.*)\"\\starget";
+				pattern = "marks\\['stat'\\]\\[" + mapPointId + 
+					"\\]\\s=\\snew\\symaps\\.Placemark[\\s\\S]*balloonContent:\\s'<p><a\\shref=\"(.*)\"\\starget";
 				// pattern = /accentMark=\snew\symaps\.Placemark[\s\S]*balloonContent:\s'<p><a\shref="(.*)"\starget/;
 				result = mapContent.match(pattern);
 
@@ -205,8 +208,6 @@ function prepareDataForDB(pointInfo) {
 		.equalTo("address", pointInfo.address)
 		.equalTo("location", pointInfo.coord)
 		.equalTo("date", pointInfo.date)
-		.equalTo("time_start", pointInfo.time_start)
-		.equalTo("time_end", pointInfo.time_end)
 		.find().then((result) => {
 			if (!result.result || result.result.length == 0) {
 				addNewPointToDB(pointInfo);
@@ -274,6 +275,7 @@ function removeStatData() {
         });
 }
 
+//Добавляем новую запись в коолекцию
 function addNewPointToDB(pointInfo) {
 	// Создадим новый экземпляр объекта коллекции points.
 	var pointItem = new scorocode.Object("points");
