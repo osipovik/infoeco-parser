@@ -12,17 +12,17 @@ var scorocode = baas.get_instance();
 // константа - адрес сайта. с которого берем информацию
 const PARSE_URL = util.get_base_url();
 
-// // Получаем страницу с табличеым представлением графика стоянок
-// request(PARSE_URL + "/grafik-stoyanok.html", function(error, response, body) {
-// 	if (error) {
-// 		console.log("error: " + error);
-// 	} else {
-// 		// Чистим старые данные
-// 		shedule.remove_old_data(body);
-// 	}
-// });
+// Получаем страницу с табличеым представлением графика стоянок
+request(PARSE_URL + "/grafik-stoyanok.html", function(error, response, body) {
+	if (error) {
+		console.log("error: " + error);
+	} else {
+		// Чистим старые данные
+		shedule.startParseShedule(body);
+	}
+});
 
-// // Получаем страницу с картой точек стоянок
+// Получаем страницу с картой точек стоянок
 // request(PARSE_URL + "/34.html", function(error, response, body) {
 // 	if (error) {
 // 		console.error("error: " + error);
@@ -31,4 +31,4 @@ const PARSE_URL = util.get_base_url();
 // 	}
 // });
 
-ecoterm.start_terminal_parse();
+// ecoterm.start_terminal_parse();

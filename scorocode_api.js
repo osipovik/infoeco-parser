@@ -35,6 +35,7 @@ exports.add_new_point = function (pointInfo) {
 				add_point_to_baas(pointInfo);
 			} else {
 				console.info('point alredy exists');
+				update_point(queryItem, pointInfo);
 			}
 		}).catch((error) => {
 	    	console.error("Что-то пошло не так: \n", error)
@@ -44,22 +45,15 @@ exports.add_new_point = function (pointInfo) {
 // Чистим старые данные о пунктах приема
 exports.clear_old_data = function() {
 	var queryItems = new scorocode.Query("points");
+	var yesterday = new Date();
+	yesterday.setDate(yesterday.getDate() - 1);
 
-	var range1 = new scorocode.Query("points");
-	var range2 = new scorocode.Query("points");	
-
-	range1.lessThan("date", new Date());
-	range2.doesNotExist("date")
-		.equalTo("time_start", 36000)
-		.equalTo("time_end", 72000);
-
-	queryItems.or(range1).or(range2)
+	queryItems.lessThan("updatedAt", yesterday)
 		.find()
 		.then((finded) => {
 			queryItems.remove(finded)
 				.then((removed) => {
 					console.log(removed);
-					startParseShedule(body);
 				})
 				.catch((error) => {
 					console.error("Что-то пошло не так: \n", error);
@@ -68,6 +62,15 @@ exports.clear_old_data = function() {
 		.catch((error) => {
             console.error("Что-то пошло не так: \n", error)
         });
+}
+
+function update_point (findedItem, pointInfo) {
+	var updateItems = new scorocode.UpdateOps("points");
+
+	updateItems.set("address", pointInfo.address);
+	findedItem.update(updateItems);
+
+	console.info("update item");
 }
 
 //Добавляем новую запись в коолекцию

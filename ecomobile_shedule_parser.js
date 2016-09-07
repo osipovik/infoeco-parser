@@ -17,6 +17,7 @@ var queue = tress(function(job, done) {
 
 queue.drain = function() {
 	console.log("Finished!");
+	baas.clear_old_data();
 };
 
 queue.error = function(err) {
@@ -27,30 +28,7 @@ queue.success = function(data) {
     // console.log('Job ' + this + ' successfully finished. Result is ' + data);
 }
 
-// Чистим старые данные в расписании стоянок
-exports.remove_old_data = function (body) {
-	var queryItems = new scorocode.Query("points");
-	var now = new Date();
-
-	queryItems.lessThan("date", now)
-		.find()
-		.then((finded) => {
-			// console.info(finded);
-			queryItems.remove(finded)
-				.then((removed) => {
-					console.log(removed);
-					startParseShedule(body);
-				})
-				.catch((error) => {
-					console.error("Что-то пошло не так: \n", error);
-				});
-		})
-		.catch((error) => {
-            console.error("Что-то пошло не так: \n", error)
-        });
-}
-
-function startParseShedule(body) {
+exports.startParseShedule = function (body) {
 	var $ = cheerio.load(body);
 	$("table.table tr:not(:first-child)").each(function() {
 		queue.push($(this));

@@ -10,6 +10,7 @@ var mapContent;
 const PARSE_URL = util.get_base_url();
 
 // Чистим старые данные о стационарных пунктах
+// TODO вынести удаление в scorocode_api
 exports.remove_old_data = function (body) {
 	$ = cheerio.load(body);
 	mapContent = $("script").text();
@@ -85,7 +86,7 @@ function getStatMapPointInfo() {
 				if (result) {
 					pointInfo.photo = PARSE_URL + "/" + result[1];
 				}
-				console.log(pointInfo);
+				// console.log(pointInfo);
 
 				baas.add_new_point(pointInfo);
 
