@@ -71,7 +71,7 @@ function parseData (body) {
 	$("table.table tr:not(:first-child)").each(function() {
 		// Каждую строку таблицы ставим в очередь на обработку
 		queue.push($(this));
-		// return false;
+		return false;
 	});
 }
 
@@ -114,12 +114,26 @@ function parseMapPointInfo (mapPointId, point) {
 		"\\s+?balloonContentFooter:\\s'(.+?)'";
 	result = mapContent.match(pattern);
 
-	point.coord = result[1].split(",");
-	point.photo = PARSE_URL + "/" + result[2];
-	point.place_title = result[3].replace(point.address + "<br/>", "").trim();
-	point.note = result[4];
+	if (result) {
+		if (result[1]) {
+			var coord = result[1].split(",");
+			point.longtitude = parseFloat(coord[0]);
+			point.latitude = parseFloat(coord[1]);
+		}
 
-	// console.info(point);
+		if (result[2]) {
+			point.photo = PARSE_URL + "/" + result[2];
+		}
+
+		if (result[3]) {
+			point.place_title = result[3].replace(point.address + "<br/>", "").trim();
+		}
+		
+		if (result[4]) {
+			point.note = result[4];
+		}
+	}
+
 	baas.add_new_point(point);
 }
 

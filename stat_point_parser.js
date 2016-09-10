@@ -64,8 +64,10 @@ function getStatListPointInfo (body) {
 			"\\]\\s=\\snew\\symaps\\.Placemark\\(\\[([0-9\\.]*,[0-9\\.]*)\\],";
 		var result = mapContent.match(pattern);
 
-		if (result) {
-			pointInfo.coord = result[1].split(",");
+		if (result && result[1]) {
+			var coord = result[1].split(",");
+			pointInfo.longtitude = parseFloat(coord[0]);
+			pointInfo.latitude = parseFloat(coord[1]);
 		}
 
 		// Ищем фотограцию места, если она есть в парметре balloonContent

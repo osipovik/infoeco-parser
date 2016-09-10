@@ -87,10 +87,10 @@ function parseMapPointInfo(mapPointId, point) {
 			var pattern =  /accentMark=\snew\symaps\.Placemark\(\[([0-9\.]*,[0-9\.]*)\],/;
 			var result = script.match(pattern);
 
-			if (result) {
-				info.coord = result[1].split(",");
-			} else {
-				
+			if (result && result[1]) {
+				var coord = result[1].split(",");
+				info.longtitude = parseFloat(coord[0]);
+				info.latitude = parseFloat(coord[1]);
 			}
 
 			//Ищем фотограцию места, если она есть в парметре balloonContent

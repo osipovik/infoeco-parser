@@ -16,32 +16,6 @@ exports.get_instance = function () {
 	return scorocode;
 }
 
-exports.add_new_point = function (pointInfo) {
-	if (pointInfo.date) {
-		var arDate = pointInfo.date.split(".");
-		pointInfo.date = new Date(arDate[2], arDate[1]-1, arDate[0], 9);
-	}
-
-	var queryItem = new scorocode.Query("points");
-
-	// console.info(pointInfo);
-
-	queryItem
-		.equalTo("address", pointInfo.address)
-		.equalTo("location", pointInfo.coord)
-		.equalTo("date", pointInfo.date)
-		.find().then((result) => {
-			if (!result.result || result.result.length == 0) {
-				add_point_to_baas(pointInfo);
-			} else {
-				console.info('point alredy exists');
-				update_point(queryItem, pointInfo);
-			}
-		}).catch((error) => {
-	    	console.error("Что-то пошло не так: \n", error)
-		});
-}
-
 // Чистим старые данные о пунктах приема
 exports.clear_old_data = function() {
 	var queryItems = new scorocode.Query("points");
@@ -64,6 +38,31 @@ exports.clear_old_data = function() {
         });
 }
 
+exports.add_new_point = function (pointInfo) {
+	if (pointInfo.date) {
+		var arDate = pointInfo.date.split(".");
+		pointInfo.date = new Date(arDate[2], arDate[1]-1, arDate[0], 9);
+	}
+
+	var queryItem = new scorocode.Query("points");
+
+	queryItem
+		.equalTo("address", pointInfo.address)
+		.equalTo("date", pointInfo.date)
+		.equalTo("longtitude", pointInfo.longtitude)
+		.equalTo("latitude", pointInfo.latitude)
+		.find().then((result) => {
+			if (!result.result || result.result.length == 0) {
+				add_point_to_baas(pointInfo);
+			} else {
+				console.info('point alredy exists');
+				update_point(queryItem, pointInfo);
+			}
+		}).catch((error) => {
+	    	console.error("Что-то пошло не так: \n", error)
+		});
+}
+
 function update_point (findedItem, pointInfo) {
 	var updateItems = new scorocode.UpdateOps("points");
 
@@ -77,31 +76,18 @@ function update_point (findedItem, pointInfo) {
 function add_point_to_baas (pointInfo) {
 	// Создадим новый экземпляр объекта коллекции points.
 	var pointItem = new scorocode.Object("points");
-	// Используем метод set() для передачи объекту данных в поля.
-	pointItem
-		.set("district", pointInfo.district)
-		.set("address", pointInfo.address)
-		.set("date", pointInfo.date)
-		.set("time_start", pointInfo.time_start)
-		.set("time_end", pointInfo.time_end);
-	// Если есть координаты, передаем их
-	if (pointInfo.coord) {
-		pointItem.set("location", pointInfo.coord);
+
+	for (var key in pointInfo) {
+		// Используем метод set() для передачи объекту данных в поля.
+		pointItem.set(key, pointInfo[key]);
 	}
-	// Если есть изображение, сохраняем ссылку на него
-	if (pointInfo.photo) {
-		pointItem.set("photo", pointInfo.photo);
-	}
-	// Если есть телефон, сохраняем его
-	if (pointInfo.phone) {
-		pointItem.set("phone", pointInfo.phone);
-	}
-	// Сохраняем объект
+
+	// Сохраняем объект в BAAS
 	pointItem.save()
 		.then((saved) => {
 			console.log(pointInfo);
 			console.log("successfully saved");
 		}).catch((error) => {
-			console.error("facking fail: \n", error);
+			console.error("fucking fail: \n", error);
 		});
 }
