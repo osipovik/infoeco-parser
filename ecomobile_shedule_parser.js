@@ -28,11 +28,19 @@ queue.success = function(data) {
     // console.log('Job ' + this + ' successfully finished. Result is ' + data);
 }
 
-exports.startParseShedule = function (body) {
-	var $ = cheerio.load(body);
-	$("table.table tr:not(:first-child)").each(function() {
-		queue.push($(this));
-		// return false;
+exports.start_parse_shedule = function () {
+	// Получаем страницу с табличеым представлением графика стоянок
+	request(PARSE_URL + "/grafik-stoyanok.html", function(error, response, body) {
+		if (error) {
+			console.log("error: " + error);
+		} else {
+			var $ = cheerio.load(body);
+			
+			$("table.table tr:not(:first-child)").each(function() {
+				queue.push($(this));
+				// return false;
+			});
+		}
 	});
 }
 

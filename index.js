@@ -12,23 +12,11 @@ var scorocode = baas.get_instance();
 // константа - адрес сайта. с которого берем информацию
 const PARSE_URL = util.get_base_url();
 
-// Получаем страницу с табличеым представлением графика стоянок
-request(PARSE_URL + "/grafik-stoyanok.html", function(error, response, body) {
-	if (error) {
-		console.log("error: " + error);
-	} else {
-		// Чистим старые данные
-		shedule.startParseShedule(body);
-	}
-});
+// Запускаем парсинг графика стоянок экомобиля
+shedule.start_parse_shedule();
 
-// Получаем страницу с картой точек стоянок
-// request(PARSE_URL + "/34.html", function(error, response, body) {
-// 	if (error) {
-// 		console.error("error: " + error);
-// 	} else {
-// 		stat_point.remove_old_data(body);
-// 	}
-// });
+// Запускаем парсинг списка стационарных пунктов
+stat_point.start_parse_stat_point();
 
-// ecoterm.start_terminal_parse();
+// Запускаем парсинг списка экотерминалов
+ecoterm.start_terminal_parse();
